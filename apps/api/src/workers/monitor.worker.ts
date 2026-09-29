@@ -1,4 +1,4 @@
-import { DataSource, LessThanOrEqual } from 'typeorm';
+import { DataSource, IsNull, LessThanOrEqual } from 'typeorm';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { Monitor, MonitorStatus } from '../modules/monitors/entities/monitor.entity';
 import { Check } from '../modules/checks/entities/check.entity';
@@ -62,7 +62,7 @@ async function processMonitor(ds: DataSource, monitor: Monitor): Promise<void> {
 
   if (wasDown && result.isUp) {
     const openIncident = await incidentRepo.findOne({
-      where: { monitorId: monitor.id, resolvedAt: undefined },
+      where: { monitorId: monitor.id, resolvedAt: IsNull() },
       order: { startedAt: 'DESC' },
     });
     if (openIncident) {
