@@ -1,0 +1,10 @@
+environment       = "staging"
+aws_region        = "us-east-1"
+app_name          = "sentinel-uptime"
+vpc_cidr          = "10.1.0.0/16"
+api_cpu           = 256
+api_memory        = 512
+api_desired_count = 1
+db_instance_class = "db.t4g.micro"
+db_name           = "sentinel"
+db_username       = "sentinel_admin"

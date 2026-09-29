@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel_dev
+      POSTGRES_DB: sentinel
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:3
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sqs,s3,secretsmanager
+      DEBUG: 0
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - ./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh
+
+  api:
+    build:
+      context: ./apps/api
+      target: build
+    command: npm run start:dev
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://sentinel:sentinel_dev@postgres:5432/sentinel
+      JWT_SECRET: dev_jwt_secret_change_in_production
+      NODE_ENV: development
+      AWS_ENDPOINT_URL: http://localstack:4566
+      SQS_ALERT_QUEUE_URL: http://localhost:4566/000000000000/sentinel-alerts
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    volumes:
+      - ./apps/api/src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+
+  web:
+    build:
+      context: ./apps/web
+      target: deps
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    volumes:
+      - ./apps/web/src:/app/src
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  localstack_data:
